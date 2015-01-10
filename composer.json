@@ -1,0 +1,25 @@
+{
+    "name": "jump24/cubesensors",
+    "authors": [
+        {
+            "name": "Daniel Newns",
+            "email": "dan@jump24.co.uk"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+    	"guzzlehttp/guzzle": "5.1.0",
+    	"guzzlehttp/oauth-subscriber": "0.1.*",
+    	"ohmy/auth": "0.0.6",
+    	"nesbot/carbon": "1.13.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "4.0.*",
+        "mockery/mockery": "0.9.3"
+    },
+    "autoload": {
+    	"psr-4" : {
+    		"Jump24\\CubeSensors\\": "src"
+    	}
+    }
+}
