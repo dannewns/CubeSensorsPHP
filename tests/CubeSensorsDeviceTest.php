@@ -1,7 +1,9 @@
 <?php
 
 use Jump24\CubeSensors\CubeSensorsDevice;
-use \Mockery;
+use GuzzleHttp\Subscriber\Mock;
+use GuzzleHttp\Message\Response;
+use GuzzleHttp\Stream\Stream;
 
 class CubeSensorsDeviceTest extends PHPUnit_Framework_TestCase {
 
@@ -14,43 +16,135 @@ class CubeSensorsDeviceTest extends PHPUnit_Framework_TestCase {
     {
     	Mockery::close();
     }
+
+    public function testGetInvalidDevice()
+    {
+    	$cube_device = new CubeSensorsDevice('tester1', 'tester2', 'token_tester', 'secret_tester');
+
+    	$mock_response = new Response(404);
+
+    	$mockResponseBody = Stream::factory('{"device": {"type": "cube", "uid": "000D6F0004491253", "extra": {"roomtype": "work", "name": "Front Room"}}, "ok": true}');
     
-   	public function testGetDevices()
-   	{
+    	$mock_response->setBody($mockResponseBody);
+    
+   		$mock = new Mock([
+		    $mock_response
+		]);
 
+   		$cube_device->setupMockDataForRequest($mock);
 
-   		$devices_class = Mockery::mock('CubeSensorsDevice', array(1,2,3,4))->makePartial();
+   		$device = $cube_device->getDevice('000D6F0004491253');
 
-   		$devices_class->shouldReceive('get')->andReturn(array( 'ok' => 1, 
-   							'devices' => array ( 0 => array 
-   												( 	'type' => 'cube',
-   												 	'uid' => '000D6F0004491253',
-   												 	'extra' => array ( 'roomtype' => 'work', 'name' => 'Front Room' ) 
-   												),
-   												1 => array ( 'type' => 'cube', 'uid' => '000D6F0003E5385E',
-   													'extra' => array ( 'roomtype' => 'sleep', 'name' => 'Bedroom' ) 
-   												) 
-   												) 
-   						));
-   		
-   		$devices  = Mockery::mock('CubeSensorsDevice', array(1,2,3,4))->makePartial();
+   		$this->assertNull($device);
+    }
 
-   		$devices_class->shouldReceive('get')->andReturn(array( 'ok' => 1, 
-   							'devices' => array ( 0 => array 
-   												( 	'type' => 'cube',
-   												 	'uid' => '000D6F0004491253',
-   												 	'extra' => array ( 'roomtype' => 'work', 'name' => 'Front Room' ) 
-   												),
-   												1 => array ( 'type' => 'cube', 'uid' => '000D6F0003E5385E',
-   													'extra' => array ( 'roomtype' => 'sleep', 'name' => 'Bedroom' ) 
-   												) 
-   												) 
-   						));
+    /**
+     * test the results of a valid device to make sure the function returns the correct class type
+     * @return [type] [description]
+     */
+    public function testCorrectClassIsReturnedWithValidDevice()
+    {
+    	$cube_device = new CubeSensorsDevice('tester1', 'tester2', 'token_tester', 'secret_tester');
 
-   		$this->assertNotCount(0, $devices->getDevices());
+    	$mock_response = new Response(200);
 
-   	//	$this->assertSame($devices_class, $devices->getDevices());
+    	$mockResponseBody = Stream::factory('{"device": {"type": "cube", "uid": "000D6F0004491253", "extra": {"roomtype": "work", "name": "Front Room"}}, "ok": true}');
+    
+    	$mock_response->setBody($mockResponseBody);
+    
+   		$mock = new Mock([
+		    $mock_response
+		]);
 
-   	}
+   		$cube_device->setupMockDataForRequest($mock);
 
+   		$device = $cube_device->getDevice('000D6F000449125334');
+
+   		$this->assertInstanceOf('Jump24\CubeSensors\Cube', $device);
+    
+    }
+
+    /**
+     * check to make sure that the contained device variables are returned correctly
+     * @return [type] [description]
+     */
+    public function testValidDeviceContainsUIDValue()
+    {
+
+    	$cube_device = new CubeSensorsDevice('tester1', 'tester2', 'token_tester', 'secret_tester');
+
+    	$mock_response = new Response(200);
+
+    	$mockResponseBody = Stream::factory('{"device": {"type": "cube", "uid": "000D6F0004491253", "extra": {"roomtype": "work", "name": "Front Room"}}, "ok": true}');
+    
+    	$mock_response->setBody($mockResponseBody);
+    
+   		$mock = new Mock([
+		    $mock_response
+		]);
+
+   		$cube_device->setupMockDataForRequest($mock);
+
+   		$device = $cube_device->getDevice('000D6F000449125334');
+
+    	$this->assertClassHasAttribute('uid', get_class($device));
+   
+    }
+
+    /**	
+     * checks to see if a roomtype attribute is present when getDevice is called
+     * @return [type] [description]
+     */
+    public function testValidDeviceContainsRoomTypeValue()
+    {
+
+    	$cube_device = new CubeSensorsDevice('tester1', 'tester2', 'token_tester', 'secret_tester');
+
+    	$mock_response = new Response(200);
+
+    	$mockResponseBody = Stream::factory('{"device": {"type": "cube", "uid": "000D6F0004491253", "extra": {"roomtype": "work", "name": "Front Room"}}, "ok": true}');
+    
+    	$mock_response->setBody($mockResponseBody);
+    
+   		$mock = new Mock([
+		    $mock_response
+		]);
+
+   		$cube_device->setupMockDataForRequest($mock);
+
+   		$device = $cube_device->getDevice('000D6F000449125334');
+
+    	$this->assertClassHasAttribute('roomtype', get_class($device));
+   
+    }
+
+    /**
+     * checks to make sure that the name attribute is present when a correct device is returned
+     * @return [type] [description]
+     */
+    public function testValidDeviceContainsNameValue()
+    {
+
+    	$cube_device = new CubeSensorsDevice('tester1', 'tester2', 'token_tester', 'secret_tester');
+
+    	$mock_response = new Response(200);
+
+    	$mockResponseBody = Stream::factory('{"device": {"type": "cube", "uid": "000D6F0004491253", "extra": {"roomtype": "work", "name": "Front Room"}}, "ok": true}');
+    
+    	$mock_response->setBody($mockResponseBody);
+    
+   		$mock = new Mock([
+		    $mock_response
+		]);
+
+   		$cube_device->setupMockDataForRequest($mock);
+
+   		$device = $cube_device->getDevice('000D6F000449125334');
+
+    	$this->assertClassHasAttribute('name', get_class($device));
+   
+    }
+    
+    
+ 
 }

@@ -18,12 +18,27 @@ class CubeSensorsDevice  {
 
   	protected $version = 'v1/';
 
-  	protected $device_room_types = array('work', 'sleep', '');
+  	protected $device_room_types = array('work', 'sleep', 'living');
 
   	protected $client;
 
+  	private $mock = NULL;
+
+  	private $error = NULL;
+
+  	private $status_code = NULL;
+
+  	private $called_url = NULL;
+
+  	private $reason = NULL;
+
+  	const API_DAY_DIFFERENCE_LIMIT = 2;
+
+  	const API_DAY_DIFFERENCE_LIMIT_ERROR =  'There was more than ' . self::API_DAY_DIFFERENCE_LIMIT . ' days between the start and end date The API currently only supports a ' . self::API_DAY_DIFFERENCE_LIMIT . ' limit';
+
  	public function __construct($consumer_key, $consumer_secret, $access_token, $access_token_secrect)
  	{
+
  		$this->consumer_key = $consumer_key;
 
  		$this->consumer_secret = $consumer_secret;
@@ -31,7 +46,17 @@ class CubeSensorsDevice  {
  		$this->access_token = $access_token;
 
  		$this->access_token_secrect = $access_token_secrect;
+ 	
+ 	}
 
+ 	/**
+ 	 * sets up the mock data for the get requests to allow for testing
+ 	 * @param  GuzzleHttp\Subscriber\Mock $mock_data the Mock object to pass into the system for testing
+ 	 * @return [type]            [description]
+ 	 */
+ 	public function setupMockDataForRequest(\GuzzleHttp\Subscriber\Mock $mock_data)
+ 	{
+ 		$this->mock = $mock_data;
  	}
 
  	/**
@@ -43,7 +68,7 @@ class CubeSensorsDevice  {
 
  		$devices =  $this->get('devices');
 
- 		if ($this->isReturnValid($devices)) {
+ 		if (!is_null($devices)) {
 
  			$formatted_devices = array();
 
@@ -71,7 +96,7 @@ class CubeSensorsDevice  {
 
  		$device = $this->get('devices/' . $device_id);
 
- 		if ($this->isReturnValid($device)) {
+ 		if (!is_null($device)) {
 
  			unset($device['ok']);
 
@@ -85,7 +110,7 @@ class CubeSensorsDevice  {
 
  	public function getHumidityReadsForDevice($device_id, $start_date = NULL, $end_date = NULL, $resolution = 1)
  	{
- 		
+
  	}
 
  	/**
@@ -95,7 +120,7 @@ class CubeSensorsDevice  {
  	 * @param  string $end_date   the end date to pull data to
  	 * @return array             returns a array of objects the keys being the date of the read
  	 */
- 	public function getDeviceReads($device_id = NULL, $start_date = NULL, $end_date = NULL, $resolution = 1)
+ 	public function getDeviceReads($device_id = NULL, $start_date = NULL, $end_date = NULL, $resolution = 60)
  	{
  		if (is_null($device_id)) return NULL;
 
@@ -107,23 +132,33 @@ class CubeSensorsDevice  {
 
 	 		} else {
 
-	 			$start_date_internal = Carbon::parse($start_date)->setTimezone('UTC')->toISO8601String();	
-
-				$start_date_internal = str_replace('+0000', 'Z', $start_date_internal); 
-
 	 			if (!is_null($end_date)) {
 
-	 				$end_date_internal = Carbon::parse($end_date)->setTimezone('UTC')->toISO8601String();
-
-	 				$end_date_internal = str_replace('+0000', 'Z', $end_date_internal);
+	 				$end_date_internal = Carbon::parse($end_date)->addHour(1)->setTimezone('UTC');
 
 	 			} else {
 
-	 				$end_date_internal = Carbon::now()->setTimezone('UTC')->toISO8601String();
-
-	 				$end_date_internal = str_replace('+0000', 'Z', $end_date_internal);
+	 				$end_date_internal = Carbon::now()->setTimezone('UTC');
 
 	 			}
+
+	 			$start_date_internal = Carbon::parse($start_date)->addHour(1)->setTimezone('UTC');	
+
+	 			if ($this->checkDateDifferenceIsMoreThanApiLimit($start_date_internal, $end_date_internal)) {
+
+	 				$this->error = self::API_DAY_DIFFERENCE_LIMIT_ERROR;
+
+	 				return NULL;
+
+	 			} 
+
+	 			$end_date_internal = $end_date_internal->toISO8601String();
+
+	 			$start_date_internal = $start_date_internal->toISO8601String();
+
+	 			$end_date_internal = str_replace('+0000', 'Z', $end_date_internal);
+
+				$start_date_internal = str_replace('+0000', 'Z', $start_date_internal); 
 
 	 			$reads = $this->getDeviceReadsBetweenDates($device_id, $start_date_internal, $end_date_internal, $resolution);
 	 		
@@ -184,13 +219,12 @@ class CubeSensorsDevice  {
  	}
 
  	/**
- 	 * returns the current reads for the device
- 	 * @param  [type] $device_id [description]
- 	 * @return [type]            [description]
+ 	 * returns the error message on the system
+ 	 * @return [type] [description]
  	 */
- 	private function getDeviceCurrentReads($device_id)
+ 	public function getErrorMessage()
  	{
- 		return $this->get('devices/' . $device_id . '/current');
+ 		return $this->error;
  	}
 
  	/**
@@ -259,6 +293,34 @@ class CubeSensorsDevice  {
  	}
 
  	/**
+ 	 * checks the date difference isnt more than the api limit
+ 	 * @param  Carbon $start_date [description]
+ 	 * @param  Carbon $end_date   [description]
+ 	 * @return [type]             [description]
+ 	 */
+ 	private function checkDateDifferenceIsMoreThanApiLimit(Carbon $start_date, Carbon $end_date)
+ 	{
+ 		if ( $start_date->diffInDays($end_date) > self::API_DAY_DIFFERENCE_LIMIT) {
+
+ 			return true;
+ 		
+ 		} else
+
+ 			return false;
+
+ 	}
+
+ 	/**
+ 	 * returns the current reads for the device
+ 	 * @param  [type] $device_id [description]
+ 	 * @return [type]            [description]
+ 	 */
+ 	private function getDeviceCurrentReads($device_id)
+ 	{
+ 		return $this->get('devices/' . $device_id . '/current');
+ 	}
+
+ 	/**
  	 * checks the returned value for the ok field to see if response was returned correctly
  	 * @param  array  $return the returned response from a API call
  	 * @return boolean         [description]
@@ -281,7 +343,7 @@ class CubeSensorsDevice  {
  	private function get($url, $query_parameters = array())
  	{
 
- 		try {
+ 		try {	
 
  			$this->setupClient();
 
@@ -309,22 +371,54 @@ class CubeSensorsDevice  {
 
 		   	$body = $response->json();
 
-		  	return $body;
+		   	if ($this->isReturnValid($body)) {
+
+		   		return $body;
+		   	
+		   	} else
+
+		   		return NULL;
 		
 		} catch(ServerException $e) {
+
+			$this->setResponseValues($e->getResponse());
+
+			$this->error = $e->getMessage();
 
 			return NULL;
 
 		} catch(ClientException $e) {
 
+			$this->error = $e->getMessage();
+
+			$this->setResponseValues($e->getResponse());
+
 			return NULL;
 
 		} catch (RequestException $e) {
+
+			$this->error = $e->getMessage();
+
+			$this->response = $e->getResponse()->getStatusCode();
 			
 			return NULL;
 		
 		}
 
+ 	}
+
+ 	/**
+ 	 * sets up the error responses for the exceptions handled
+ 	 * @param GuzzleHttp\Message\Response $response [description]
+ 	 */
+ 	private function setResponseValues(\GuzzleHttp\Message\Response $response)
+ 	{
+
+		$this->status_code = $response->getStatusCode();
+
+		$this->reason = $response->getReasonPhrase();
+
+		$this->called_url = $response->getEffectiveUrl();
  	}
 
  	/**
@@ -344,6 +438,12 @@ class CubeSensorsDevice  {
  		$this->client = new Client( array(	'base_url' => $this->route . $this->version, 
  											'defaults' => array('auth' => 'oauth') ) );
 
+
+ 		if (!is_null($this->mock)) {
+
+ 			$this->client->getEmitter()->attach($this->mock);
+ 			
+ 		} 
 
 		$this->client->getEmitter()->attach($oauth);
  	}
