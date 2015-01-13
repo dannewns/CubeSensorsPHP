@@ -6,11 +6,20 @@ class Cube  {
 
 	/**
 	 * the universial unique identifier
-	 * @var [type]
+	 * @var string
 	 */
 	public $uid;
 
+	/**
+	 * the name given to the cube
+	 * @var string
+	 */
+	public $name;
 
+	/**
+	 * the type of cube at the momement there is only a single type
+	 * @var [type]
+	 */
 	public $type;
 
 	/**
@@ -19,7 +28,10 @@ class Cube  {
 	 */
 	public $roomtype;
 
-
+	/**	
+	 * the time of the reading
+	 * @var [type]
+	 */
 	public $time;
 
 	/**
