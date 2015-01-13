@@ -34,7 +34,7 @@ class CubeSensorsDevice  {
 
   	const API_DAY_DIFFERENCE_LIMIT = 2;
 
-  	const API_DAY_DIFFERENCE_LIMIT_ERROR =  'There was more than ' . self::API_DAY_DIFFERENCE_LIMIT . ' days between the start and end date The API currently only supports a ' . self::API_DAY_DIFFERENCE_LIMIT . ' limit';
+  	const API_DAY_DIFFERENCE_LIMIT_ERROR =  'There was more than 2 days between the start and end date The API currently only supports a 2 limit';
 
  	public function __construct($consumer_key, $consumer_secret, $access_token, $access_token_secrect)
  	{
