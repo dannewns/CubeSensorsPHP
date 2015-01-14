@@ -18,7 +18,7 @@ class Cube  {
 
 	/**
 	 * the type of cube at the momement there is only a single type
-	 * @var [type]
+	 * @var string
 	 */
 	public $type;
 

@@ -34,8 +34,6 @@ class CubeSensorsDevice  {
 
   	const API_DAY_DIFFERENCE_LIMIT = 2;
 
-  	const API_DAY_DIFFERENCE_LIMIT_ERROR =  'There was more than 2 days between the start and end date The API currently only supports a 2 limit';
-
  	public function __construct($consumer_key, $consumer_secret, $access_token, $access_token_secrect)
  	{
 
@@ -108,8 +106,21 @@ class CubeSensorsDevice  {
 
  	}
 
- 	public function getHumidityReadsForDevice($device_id, $start_date = NULL, $end_date = NULL, $resolution = 1)
+ 	public function getHumidityReadsForDevice($device_id, $start_date = NULL, $end_date = NULL, $resolution = 60)
  	{
+ 		$reads = $this->getDeviceReads($device_id, $start_date, $end_date, $resolution);
+
+ 		var_dump($reads);
+ 		die();
+
+ 		if (is_null($reads)) {
+
+ 			return NULL;
+
+ 		} else {
+
+
+ 		}
 
  	}
 
@@ -130,6 +141,7 @@ class CubeSensorsDevice  {
 
 	 			$reads = $this->getDeviceCurrentReads($device_id);
 
+
 	 		} else {
 
 	 			if (!is_null($end_date)) {
@@ -146,7 +158,7 @@ class CubeSensorsDevice  {
 
 	 			if ($this->checkDateDifferenceIsMoreThanApiLimit($start_date_internal, $end_date_internal)) {
 
-	 				$this->error = self::API_DAY_DIFFERENCE_LIMIT_ERROR;
+	 				$this->error = 'There was more than ' . self::API_DAY_DIFFERENCE_LIMIT . ' days between the start and end date The API currently only supports a ' . self::API_DAY_DIFFERENCE_LIMIT . ' day limit';
 
 	 				return NULL;
 
@@ -399,7 +411,7 @@ class CubeSensorsDevice  {
 
 			$this->error = $e->getMessage();
 
-			$this->response = $e->getResponse()->getStatusCode();
+			//$this->setResponseValues($e->getResponse());
 			
 			return NULL;
 		
