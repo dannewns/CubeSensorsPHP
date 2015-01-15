@@ -1,13 +1,20 @@
 {
     "name": "jump24/cubesensors",
+    "description": "CubeSensors API wrapper to help users retrieve data easier.",
+    "keywords" : ["cubesensors"],
+    "license": "MIT",
     "authors": [
         {
             "name": "Daniel Newns",
-            "email": "dan@jump24.co.uk"
+            "email": "dan@jump24.co.uk",
+            "homepage" : "http://www.jump24.co.uk",
+            "role"  : "Developer"
+
         }
     ],
     "minimum-stability": "dev",
     "require": {
+        "php": ">=5.4.0",
     	"guzzlehttp/guzzle": "5.1.0",
     	"guzzlehttp/oauth-subscriber": "0.1.*",
     	"ohmy/auth": "0.0.6",
