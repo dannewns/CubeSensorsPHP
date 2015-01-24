@@ -14,7 +14,7 @@ class CubeSensorsValidation  {
 
   	const END_DATE_BEFORE_START_DATE_ERROR = 'The end date you supplied is before the start date you supplied';
 
-  	protected $api_range_limit_error = 'There was more than ' . self::API_DAY_DIFFERENCE_LIMIT . ' days between the start and end date The API currently only supports a ' . self::API_DAY_DIFFERENCE_LIMIT . ' day limit';
+  	protected $api_range_limit_error = 'There was more than 2 days between the start and end date The API currently only supports a 2 day limit';
 
 
   	/**
