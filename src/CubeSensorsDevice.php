@@ -186,7 +186,14 @@ class CubeSensorsDevice  {
  	 */
  	protected function convertToCarbon($date)
  	{
- 		return Carbon::createFromFormat('Y-m-d', $date)->setTimezone('UTC');
+
+ 		if (is_null($date)) {
+
+ 			return Carbon::now()->setTimezone('UTC');
+ 			
+ 		} else 
+
+ 			return Carbon::createFromFormat('Y-m-d', $date)->setTimezone('UTC');
 
  	}
 
