@@ -43,7 +43,7 @@ class CubeSensorsDevice  {
 
   	const END_DATE_BEFORE_START_DATE_ERROR = 'The end date you supplied is before the start date you supplied';
 
-  	private $api_range_limit_error = 'There was more than ' . self::API_DAY_DIFFERENCE_LIMIT . ' days between the start and end date The API currently only supports a ' . self::API_DAY_DIFFERENCE_LIMIT . ' day limit';
+  	private $api_range_limit_error = 'There was more than 2 days between the start and end date The API currently only supports a 2 day limit';
 
  	public function __construct($consumer_key, $consumer_secret, $access_token, $access_token_secrect)
  	{
