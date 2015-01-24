@@ -159,7 +159,7 @@ class CubeSensorsDeviceTest extends PHPUnit_Framework_TestCase {
     	$mock_response->setBody($mockResponseBody);
     
    		$mock = new Mock([
-		    $mock_response
+		     $mock_response
 		  ]);
 
    		$cube_device->setupMockDataForRequest($mock);
@@ -178,35 +178,62 @@ class CubeSensorsDeviceTest extends PHPUnit_Framework_TestCase {
     public function testStartDateInTheFutureForDeviceReadsReturnsNullAndError()
     {
      
-      // $cube_device = new CubeSensorsDevice('tester1', 'tester2', 'token_tester', 'secret_tester');
+      $cube_device = new CubeSensorsDevice('tester1', 'tester2', 'token_tester', 'secret_tester');
 
-      // $mock_response = $mock_response_second = $mock_response_third =  new Response(200);
+      $mock_response = $mock_response_second = $mock_response_third =  new Response(200);
 
-      // $mockResponseBody = Stream::factory(fopen(__DIR__ . '/files/single_device_returned.json', 'r+'));
+      $mockResponseBody = Stream::factory(fopen(__DIR__ . '/files/single_device_returned.json', 'r+'));
 
-      // $mock_response->setBody($mockResponseBody);
+      $mock_response->setBody($mockResponseBody);
 
-      // $mock_response_second->setBody($mockResponseBody);
+      $mock_response_second->setBody($mockResponseBody);
 
-      // $mock_response_third->setBody($mockResponseBody);
+      $mock_response_third->setBody($mockResponseBody);
     
-      // $mock = new Mock([
-      //   $mock_response,
-      //   $mock_response_second,
-      //   $mock_response_third
-      // ]);
+      $mock = new Mock([
+        $mock_response,
+        $mock_response_second,
+        $mock_response_third
+      ]);
 
-      // $cube_device->setupMockDataForRequest($mock);
+      $cube_device->setupMockDataForRequest($mock);
 
-      // $tomorrow = Carbon::now()->addDay(1);
+      $tomorrow = Carbon::now()->addDay(1);
 
-      // $device = $cube_device->getDeviceReads('000D6F0004491253', $tomorrow->format('Y-m-d'));
+      $device = $cube_device->getDeviceReads('000D6F0004491253', $tomorrow->format('Y-m-d'));
 
-      // $this->assertNull($device);
+      $this->assertNull($device);
 
-      // $this->assertSame('The start date you provided is in the future', $cube_device->getErrorMessage());
+      $this->assertSame('The start date you provided is in the future', $cube_device->getErrorMessage());
    
     }
+
+     public function testHandlesStartDateAndNoEndDate()
+    {
+     
+      $cube_device = new CubeSensorsDevice('tester1', 'tester2', 'token_tester', 'secret_tester');
+
+      $mock_response =  new Response(200, [], Stream::factory(fopen(__DIR__ . '/files/single_device_returned.json', 'r+')));
+
+      $mock_response_second =  new Response(200, [],  Stream::factory(fopen(__DIR__ . '/files/single_device_multi_reads.json', 'r+')));
+    
+      $mock = new Mock([
+        $mock_response,
+        $mock_response_second
+      ]);
+
+      $cube_device->setupMockDataForRequest($mock);
+
+      $start_date = Carbon::now()->subDay(1);
+
+      $reads = $cube_device->getDeviceReads('000D6F0004491253', $start_date->format('Y-m-d'), NULL);
+      
+      $this->assertInternalType('array', $reads);
+
+      $this->assertNotCount(0, $reads);
+  
+    }
+
 
 
 

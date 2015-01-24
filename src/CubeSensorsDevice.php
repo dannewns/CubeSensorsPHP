@@ -190,7 +190,7 @@ class CubeSensorsDevice  {
  		if (is_null($date)) {
 
  			return Carbon::now()->setTimezone('UTC');
- 			
+
  		} else 
 
  			return Carbon::createFromFormat('Y-m-d', $date)->setTimezone('UTC');
@@ -208,11 +208,25 @@ class CubeSensorsDevice  {
  	protected function getDeviceReadsBetweenDates($device_id = NULL, Carbon $start_date, Carbon $end_date, $resolution)
  	{	
 
+
  		if (!$this->validation->validateStartDateIsInPast($start_date)) {
 
  			$this->error = $this->validation->getErrorMessage(); 
 
  		 	return NULL;
+
+ 		}
+
+ 	
+ 		if (!is_null($end_date))  {
+
+ 			if (!$this->validation->validateIfEndDateIsBeforeStartDate($start_date, $end_date)) {
+
+ 				$this->error = $this->validation->getErrorMessage();
+
+ 		 		return NULL;
+
+ 			}
 
  		}
 
@@ -223,19 +237,6 @@ class CubeSensorsDevice  {
 			return NULL;
 
 		} 
-
- 		if (!is_null($this->end_date))  {
-
-
- 			if (!$this->validateIfEndDateIsBeforeStartDate($start_date, $end_date)) {
-
- 				$this->error = $this->validation->getErrorMessage();
-
- 		 		return NULL;
-
- 			}
-
- 		}
 
 		$end_date_internal = $end_date->toISO8601String();
 

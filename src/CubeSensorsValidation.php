@@ -73,7 +73,10 @@ class CubeSensorsValidation  {
  	public function validateIfEndDateIsBeforeStartDate(Carbon $start_date, Carbon $end_date)
  	{
 
- 		if (ctype_digit($start_date->diffInDays($end_date, false)))
+
+    $difference = $start_date->diffInDays($end_date, false);
+    
+ 		if ($difference  > 0)
 
  			return true;
 
