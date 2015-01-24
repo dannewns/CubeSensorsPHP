@@ -4,6 +4,7 @@ use Jump24\CubeSensors\CubeSensorsDevice;
 use GuzzleHttp\Subscriber\Mock;
 use GuzzleHttp\Message\Response;
 use GuzzleHttp\Stream\Stream;
+use Carbon\Carbon;
 
 class CubeSensorsDeviceTest extends PHPUnit_Framework_TestCase {
 
@@ -14,7 +15,7 @@ class CubeSensorsDeviceTest extends PHPUnit_Framework_TestCase {
     
     public function tearDown() 
     {
-    	Mockery::close();
+
     }
 
     public function testGetInvalidDevice()
@@ -29,7 +30,7 @@ class CubeSensorsDeviceTest extends PHPUnit_Framework_TestCase {
     
    		$mock = new Mock([
 		    $mock_response
-		]);
+		  ]);
 
    		$cube_device->setupMockDataForRequest($mock);
 
@@ -169,80 +170,46 @@ class CubeSensorsDeviceTest extends PHPUnit_Framework_TestCase {
    
     }
 
-    /**
-     * tests to see that when a date range that is out of the API limit is passed into the system that the class handles and returns null and sets a error message correctly
-     * @return [type] [description]
-     */
-    public function testInvalidDateRangeHandlingAndErrorSet()
-    {
-
-      $cube_device = new CubeSensorsDevice('tester1', 'tester2', 'token_tester', 'secret_tester');
-
-      $mock_response = $mock_response_second = $mock_response_third =  new Response(200);
-
-      $mockResponseBody = Stream::factory('{"device": {"type": "cube", "uid": "000D6F0004491253", "extra": {"roomtype": "work", "name": "Front Room"}}, "ok": true}');
-    
-      $mock_response->setBody($mockResponseBody);
-
-      $mock_response_second->setBody($mockResponseBody);
-
-      $mock_response_third->setBody($mockResponseBody);
-    
-      $mock = new Mock([
-        $mock_response,
-        $mock_response_second,
-        $mock_response_third
-      ]);
-
-      $cube_device->setupMockDataForRequest($mock);
-
-      $device = $cube_device->getDeviceReads('000D6F0004491253', '2015-01-01');
-
-      $this->assertNull($device);
-
-      $this->assertSame('There was more than 2 days between the start and end date The API currently only supports a 2 day limit', $cube_device->getErrorMessage());
-   
-    }
-
-    public function testHumidityDeviceReadsAreOnlyReturnedFromDeviceWithoutDates()
-    {
-
-      $cube_device = new CubeSensorsDevice('tester1', 'tester2', 'token_tester', 'secret_tester');
-
-      $mock_response = new Response(200);
-
-      $mockResponseBody = Stream::factory('{"device": {"type": "cube", "uid": "000D6F0004491253", "extra": {"roomtype": "work", "name": "Front Room"}}, "ok": true}');
-    
-      $mock_response->setBody($mockResponseBody);
-    
-      $mock = new Mock([
-        $mock_response
-      ]);
-
-      $cube_device->setupMockDataForRequest($mock);
-
-      $device = $cube_device->getHumidityReadsForDevice('000D6F0004491253');
-   
-    }
-
+  
     /**
      * tests that the class handles a start date thats in the future and that it returns a NULL and that a error message is set letting the user know whats happened
      * @return [type] [description]
      */
     public function testStartDateInTheFutureForDeviceReadsReturnsNullAndError()
     {
+     
+      // $cube_device = new CubeSensorsDevice('tester1', 'tester2', 'token_tester', 'secret_tester');
 
-    }
+      // $mock_response = $mock_response_second = $mock_response_third =  new Response(200);
 
-    /**
-     * tests that the class can handle when a user puts a end date thats before a start date and returns NULL and sets a error message
-     * @return [type] [description]
-     */
-    public function testEndDateBeforeStartDateError()
-    {
+      // $mockResponseBody = Stream::factory(fopen(__DIR__ . '/files/single_device_returned.json', 'r+'));
 
-    }
+      // $mock_response->setBody($mockResponseBody);
+
+      // $mock_response_second->setBody($mockResponseBody);
+
+      // $mock_response_third->setBody($mockResponseBody);
     
+      // $mock = new Mock([
+      //   $mock_response,
+      //   $mock_response_second,
+      //   $mock_response_third
+      // ]);
+
+      // $cube_device->setupMockDataForRequest($mock);
+
+      // $tomorrow = Carbon::now()->addDay(1);
+
+      // $device = $cube_device->getDeviceReads('000D6F0004491253', $tomorrow->format('Y-m-d'));
+
+      // $this->assertNull($device);
+
+      // $this->assertSame('The start date you provided is in the future', $cube_device->getErrorMessage());
+   
+    }
+
+
+
     
  
 }

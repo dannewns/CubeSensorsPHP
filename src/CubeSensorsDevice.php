@@ -3,6 +3,7 @@
 namespace Jump24\CubeSensors;
 
 use Jump24\CubeSensors\Cube;
+use Jump24\CubeSensors\Validation;
 use Carbon\Carbon;
 use GuzzleHttp\Client;
 use GuzzleHttp\Subscriber\Oauth\Oauth1;
@@ -22,6 +23,10 @@ class CubeSensorsDevice  {
 
   	protected $client;
 
+  	protected $start_date;
+
+  	protected $end_date;
+
   	private $mock = NULL;
 
   	private $error = NULL;
@@ -34,6 +39,12 @@ class CubeSensorsDevice  {
 
   	const API_DAY_DIFFERENCE_LIMIT = 2;
 
+  	const START_DATE_IN_FUTURE_ERROR = 'The start date you provided is in the future';
+
+  	const END_DATE_BEFORE_START_DATE_ERROR = 'The end date you supplied is before the start date you supplied';
+
+  	private $api_range_limit_error = 'There was more than ' . self::API_DAY_DIFFERENCE_LIMIT . ' days between the start and end date The API currently only supports a ' . self::API_DAY_DIFFERENCE_LIMIT . ' day limit';
+
  	public function __construct($consumer_key, $consumer_secret, $access_token, $access_token_secrect)
  	{
 
@@ -45,6 +56,7 @@ class CubeSensorsDevice  {
 
  		$this->access_token_secrect = $access_token_secrect;
  	
+ 		$this->validation = new \Jump24\CubeSensors\CubeSensorsValidation;
  	}
 
  	/**
@@ -110,9 +122,6 @@ class CubeSensorsDevice  {
  	{
  		$reads = $this->getDeviceReads($device_id, $start_date, $end_date, $resolution);
 
- 		var_dump($reads);
- 		die();
-
  		if (is_null($reads)) {
 
  			return NULL;
@@ -137,42 +146,17 @@ class CubeSensorsDevice  {
 
  		if ($device = $this->getDevice($device_id)) {
 
-	 		if (is_null($start_date)) {
+	 		if (is_null($start_date) && is_null($end_date)) {
 
 	 			$reads = $this->getDeviceCurrentReads($device_id);
 
-
 	 		} else {
 
-	 			if (!is_null($end_date)) {
+	 			$start_date = $this->convertToCarbon($start_date);
 
-	 				$end_date_internal = Carbon::parse($end_date)->addHour(1)->setTimezone('UTC');
+	 			$end_date = $this->convertToCarbon($end_date);
 
-	 			} else {
-
-	 				$end_date_internal = Carbon::now()->setTimezone('UTC');
-
-	 			}
-
-	 			$start_date_internal = Carbon::parse($start_date)->addHour(1)->setTimezone('UTC');	
-
-	 			if ($this->checkDateDifferenceIsMoreThanApiLimit($start_date_internal, $end_date_internal)) {
-
-	 				$this->error = 'There was more than ' . self::API_DAY_DIFFERENCE_LIMIT . ' days between the start and end date The API currently only supports a ' . self::API_DAY_DIFFERENCE_LIMIT . ' day limit';
-
-	 				return NULL;
-
-	 			} 
-
-	 			$end_date_internal = $end_date_internal->toISO8601String();
-
-	 			$start_date_internal = $start_date_internal->toISO8601String();
-
-	 			$end_date_internal = str_replace('+0000', 'Z', $end_date_internal);
-
-				$start_date_internal = str_replace('+0000', 'Z', $start_date_internal); 
-
-	 			$reads = $this->getDeviceReadsBetweenDates($device_id, $start_date_internal, $end_date_internal, $resolution);
+	 			$reads = $this->getDeviceReadsBetweenDates($device_id, $start_date, $end_date, $resolution);
 	 		
 	 		}
 
@@ -189,48 +173,6 @@ class CubeSensorsDevice  {
  	} 	
 
  	/**
- 	 * returns reads for a device by a start and end date supplied by the user
- 	 * @param  string $device_id  the device id to get data for
- 	 * @param  [type] $start_date [description]
- 	 * @param  [type] $end_date   [description]
- 	 * @param  [type] $resolution [description]
- 	 * @return [type]             [description]
- 	 */
- 	protected function getDeviceReadsBetweenDates($device_id = NULL, $start_date, $end_date, $resolution)
- 	{
- 		if (is_null($device_id)) return NULL;
-
- 		if ($device = $this->getDevice($device_id)) {
- 	
- 			return  $this->get('devices/' . $device_id . '/span', ['start' => $start_date, 'end' => $end_date, 'resolution' => $resolution ] );
-
- 		} else 
-
- 			return NULL;
-
- 	}
-
- 	public function getDevicesByType($type)
- 	{
-
- 		if (!in_array($type, $this->device_room_types)) return NULL;
-
- 		$devices = $this->get('devices');
-
- 		if (is_array($devices)) {
-
- 			$devices_type;
-
- 			foreach ($devices as $device){
-
-
- 			}
-
- 		}
-
- 	}
-
- 	/**
  	 * returns the error message on the system
  	 * @return [type] [description]
  	 */
@@ -238,6 +180,68 @@ class CubeSensorsDevice  {
  	{
  		return $this->error;
  	}
+
+ 	/**
+ 	 * sets up the start and end date variables for the class to use and converts them to carbon format
+ 	 */
+ 	protected function convertToCarbon($date)
+ 	{
+ 		return Carbon::createFromFormat('Y-m-d', $date)->setTimezone('UTC');
+
+ 	}
+
+ 	/**
+ 	 * returns reads for a device by a start and end date supplied by the user
+ 	 * @param  string $device_id  the device id to get data for
+ 	 * @param  [type] $start_date [description]
+ 	 * @param  [type] $end_date   [description]
+ 	 * @param  [type] $resolution [description]
+ 	 * @return [type]             [description]
+ 	 */
+ 	protected function getDeviceReadsBetweenDates($device_id = NULL, Carbon $start_date, Carbon $end_date, $resolution)
+ 	{	
+
+ 		if (!$this->validation->validateStartDateIsInPast($start_date)) {
+
+ 			$this->error = $this->validation->getErrorMessage(); 
+
+ 		 	return NULL;
+
+ 		}
+
+ 		if (!$this->validation->validateDateDifferenceIsInBetweenApiLimit($start_date, $end_date) ){
+
+			$this->error = $this->validation->getErrorMessage();
+
+			return NULL;
+
+		} 
+
+ 		if (!is_null($this->end_date))  {
+
+
+ 			if (!$this->validateIfEndDateIsBeforeStartDate($start_date, $end_date)) {
+
+ 				$this->error = $this->validation->getErrorMessage();
+
+ 		 		return NULL;
+
+ 			}
+
+ 		}
+
+		$end_date_internal = $end_date->toISO8601String();
+
+		$start_date_internal = $start_date->toISO8601String();
+
+		$end_date_internal = str_replace('+0000', 'Z', $end_date_internal);
+
+		$start_date_internal = str_replace('+0000', 'Z', $start_date_internal); 
+ 	
+ 		return  $this->get('devices/' . $device_id . '/span', ['start' => $start_date_internal, 'end' => $end_date_internal, 'resolution' => $resolution ] );
+
+ 	}
+
 
  	/**
  	 * formats the returned list of devices from the device call api into a more friendly result set
@@ -305,31 +309,13 @@ class CubeSensorsDevice  {
  	}
 
  	/**
- 	 * checks the date difference isnt more than the api limit
- 	 * @param  Carbon $start_date [description]
- 	 * @param  Carbon $end_date   [description]
- 	 * @return [type]             [description]
- 	 */
- 	private function checkDateDifferenceIsMoreThanApiLimit(Carbon $start_date, Carbon $end_date)
- 	{
- 		if ( $start_date->diffInDays($end_date) > self::API_DAY_DIFFERENCE_LIMIT) {
-
- 			return true;
- 		
- 		} else
-
- 			return false;
-
- 	}
-
- 	/**
  	 * returns the current reads for the device
  	 * @param  [type] $device_id [description]
  	 * @return [type]            [description]
  	 */
  	private function getDeviceCurrentReads($device_id)
  	{
- 		return $this->get('devices/' . $device_id . '/current');
+ 		return $this->get('devices/' . $device_id . '/current', array(), true);
  	}
 
  	/**
@@ -352,7 +338,7 @@ class CubeSensorsDevice  {
  	 * @param  array 	$query_parameters the query string parameters to pass into the call
  	 * @return 			the result from the call be it the details for a cube or NULL when nothing found
  	 */
- 	private function get($url, $query_parameters = array())
+ 	private function get($url, $query_parameters = array(), $dump_data = false)
  	{
 
  		try {	
@@ -380,6 +366,17 @@ class CubeSensorsDevice  {
 		    	return NULL;
 		    
 		    }
+
+		    if ($dump_data) {
+
+		    	$body = $response->getBody();
+
+		    	echo $body;
+
+		    	die();
+		    
+		    }
+
 
 		   	$body = $response->json();
 
@@ -431,13 +428,14 @@ class CubeSensorsDevice  {
 		$this->reason = $response->getReasonPhrase();
 
 		$this->called_url = $response->getEffectiveUrl();
+ 	
  	}
 
  	/**
  	 * sets up the guzzle client ready to use the api
  	 * @return [type] [description]
  	 */
- 	protected function setupClient()
+ 	private function setupClient()
  	{
  		
  		$oauth = new Oauth1([
