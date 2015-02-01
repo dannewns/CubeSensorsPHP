@@ -118,20 +118,20 @@ class CubeSensorsDevice  {
 
  	}
 
- 	public function getHumidityReadsForDevice($device_id, $start_date = NULL, $end_date = NULL, $resolution = 60)
- 	{
- 		$reads = $this->getDeviceReads($device_id, $start_date, $end_date, $resolution);
+ 	// public function getHumidityReadsForDevice($device_id, $start_date = NULL, $end_date = NULL, $resolution = 60)
+ 	// {
+ 	// 	$reads = $this->getDeviceReads($device_id, $start_date, $end_date, $resolution);
 
- 		if (is_null($reads)) {
+ 	// 	if (is_null($reads)) {
 
- 			return NULL;
+ 	// 		return NULL;
 
- 		} else {
+ 	// 	} else {
 
 
- 		}
+ 	// 	}
 
- 	}
+ 	// }
 
  	/**
  	 * returns a list of device reads from the API
