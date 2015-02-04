@@ -323,7 +323,7 @@ class CubeSensorsDevice  {
  	 */
  	private function getDeviceCurrentReads($device_id)
  	{
- 		return $this->get('devices/' . $device_id . '/current', array(), true);
+ 		return $this->get('devices/' . $device_id . '/current', array());
  	}
 
  	/**
