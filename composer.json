@@ -16,7 +16,7 @@
     "require": {
         "php": ">=5.4.0",
     	"guzzlehttp/guzzle": "5.1.0",
-    	"guzzlehttp/oauth-subscriber": "0.1.*",
+    	"guzzlehttp/oauth-subscriber": "0.2.0",
     	"ohmy/auth": "0.0.6",
     	"nesbot/carbon": "1.13.0"
     },
