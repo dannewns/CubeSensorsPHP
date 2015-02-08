@@ -12,7 +12,7 @@ class CubeSensorsDeviceTest extends PHPUnit_Framework_TestCase {
     {
 
     }
-    
+ 
     public function tearDown() 
     {
 
@@ -25,69 +25,48 @@ class CubeSensorsDeviceTest extends PHPUnit_Framework_TestCase {
     	$mock_response = new Response(404);
 
     	$mockResponseBody = Stream::factory('{"device": {"type": "cube", "uid": "000D6F0004491253", "extra": {"roomtype": "work", "name": "Front Room"}}, "ok": true}');
-    
+ 
     	$mock_response->setBody($mockResponseBody);
-    
-   		$mock = new Mock([
-		    $mock_response
-		  ]);
+ 
+   		$mock = new Mock([ $mock_response ]);
 
    		$cube_device->setupMockDataForRequest($mock);
 
    		$device = $cube_device->getDevice('000D6F0004491253');
 
    		$this->assertNull($device);
-    
+ 
     }
 
+    /**
+     * checks to see when a correct device call is returned that the array contains the correct information
+     * @return [type] [description]
+     */
     public function testValidDeviceIsReturned()
     {
+     
       $cube_device = new CubeSensorsDevice('tester1', 'tester2', 'token_tester', 'secret_tester');
 
       $mock_response = new Response(200);
 
       $mockResponseBody = Stream::factory('{"device": {"type": "cube", "uid": "000D6F0004491253", "extra": {"roomtype": "work", "name": "Front Room"}}, "ok": true}');
-    
+ 
       $mock_response->setBody($mockResponseBody);
-    
-      $mock = new Mock([
-        $mock_response
-      ]);
+ 
+      $mock = new Mock([ $mock_response ]);
 
       $cube_device->setupMockDataForRequest($mock);
 
       $device = $cube_device->getDevice('000D6F0004491253');
 
-      $this->assertInstanceOf('Jump24\CubeSensors\Cube', $device);
-    
+      $this->assertArrayHasKey('uid', $device);
+
+      $this->assertArrayHasKey('roomtype', $device);
+
+      $this->assertArrayHasKey('name', $device);
+ 
     }
 
-    /**
-     * test the results of a valid device to make sure the function returns the correct class type
-     * @return [type] [description]
-     */
-    public function testCorrectClassIsReturnedWithValidDevice()
-    {
-    	
-      $cube_device = new CubeSensorsDevice('tester1', 'tester2', 'token_tester', 'secret_tester');
-
-    	$mock_response = new Response(200);
-
-    	$mockResponseBody = Stream::factory('{"device": {"type": "cube", "uid": "000D6F0004491253", "extra": {"roomtype": "work", "name": "Front Room"}}, "ok": true}');
-    
-    	$mock_response->setBody($mockResponseBody);
-    
-   		$mock = new Mock([
-		    $mock_response
-		]);
-
-   		$cube_device->setupMockDataForRequest($mock);
-
-   		$device = $cube_device->getDevice('000D6F000449125334');
-
-   		$this->assertInstanceOf('Jump24\CubeSensors\Cube', $device);
-    
-    }
 
     /**
      * check to make sure that the contained device variables are returned correctly
@@ -101,19 +80,17 @@ class CubeSensorsDeviceTest extends PHPUnit_Framework_TestCase {
     	$mock_response = new Response(200);
 
     	$mockResponseBody = Stream::factory('{"device": {"type": "cube", "uid": "000D6F0004491253", "extra": {"roomtype": "work", "name": "Front Room"}}, "ok": true}');
-    
+ 
     	$mock_response->setBody($mockResponseBody);
-    
-   		$mock = new Mock([
-		    $mock_response
-		]);
+ 
+   		$mock = new Mock([ $mock_response ]);
 
    		$cube_device->setupMockDataForRequest($mock);
 
    		$device = $cube_device->getDevice('000D6F0004491253');
 
-    	$this->assertSame('000D6F0004491253', $device->uid);
-   
+    	$this->assertSame('000D6F0004491253', $device['uid']);
+
     }
 
     /**	
@@ -128,19 +105,17 @@ class CubeSensorsDeviceTest extends PHPUnit_Framework_TestCase {
     	$mock_response = new Response(200);
 
     	$mockResponseBody = Stream::factory('{"device": {"type": "cube", "uid": "000D6F0004491253", "extra": {"roomtype": "work", "name": "Front Room"}}, "ok": true}');
-    
+ 
     	$mock_response->setBody($mockResponseBody);
-    
-   		$mock = new Mock([
-  		    $mock_response
-  		]);
+ 
+   		$mock = new Mock([ $mock_response ]);
 
    		$cube_device->setupMockDataForRequest($mock);
 
    		$device = $cube_device->getDevice('000D6F0004491253');
 
-    	$this->assertSame('work', $device->roomtype);
-   
+    	$this->assertSame('work', $device['roomtype']);
+
     }
 
     /**
@@ -155,41 +130,40 @@ class CubeSensorsDeviceTest extends PHPUnit_Framework_TestCase {
     	$mock_response = new Response(200);
 
     	$mockResponseBody = Stream::factory('{"device": {"type": "cube", "uid": "000D6F0004491253", "extra": {"roomtype": "work", "name": "Front Room"}}, "ok": true}');
-    
+ 
     	$mock_response->setBody($mockResponseBody);
-    
-   		$mock = new Mock([
-		     $mock_response
-		  ]);
+ 
+   		$mock = new Mock([ $mock_response ]);
 
    		$cube_device->setupMockDataForRequest($mock);
 
    		$device = $cube_device->getDevice('000D6F0004491253');
 
-    	$this->assertSame('Front Room', $device->name);
-   
+    	$this->assertSame('Front Room', $device['name']);
+
     }
 
   
     /**
-     * tests that the class handles a start date thats in the future and that it returns a NULL and that a error message is set letting the user know whats happened
+     * tests that the class handles a start date thats in the future and that it returns a NULL and that a error message is set letting 
+     * the user know whats happened
      * @return [type] [description]
      */
-    public function testStartDateInTheFutureForDeviceReadsReturnsNullAndError()
+    public function testGetDeviceReadsForDateUsingDateInTheFuture()
     {
-     
+  
       $cube_device = new CubeSensorsDevice('tester1', 'tester2', 'token_tester', 'secret_tester');
 
       $mock_response = $mock_response_second = $mock_response_third =  new Response(200);
 
-      $mockResponseBody = Stream::factory(fopen(__DIR__ . '/files/single_device_returned.json', 'r+'));
+      $mockResponseBody = Stream::factory(fopen(__DIR__ . '/files/single_device_read.json', 'r+'));
 
       $mock_response->setBody($mockResponseBody);
 
       $mock_response_second->setBody($mockResponseBody);
 
       $mock_response_third->setBody($mockResponseBody);
-    
+ 
       $mock = new Mock([
         $mock_response,
         $mock_response_second,
@@ -200,43 +174,90 @@ class CubeSensorsDeviceTest extends PHPUnit_Framework_TestCase {
 
       $tomorrow = Carbon::now()->addDay(1);
 
-      $device = $cube_device->getDeviceReads('000D6F0004491253', $tomorrow->format('Y-m-d'));
+      $device = $cube_device->getDeviceReadsForDate('000D6F0004491253', $tomorrow->format('Y-m-d'));
 
       $this->assertNull($device);
 
-      $this->assertSame('The start date you provided is in the future', $cube_device->getErrorMessage());
-   
+      $this->assertSame('The date you provided is in the future', $cube_device->getErrorMessage());
+
     }
 
-     public function testHandlesStartDateAndNoEndDate()
+    /**
+     * tests that the correct error is returned when a date is passed in thats older than 24 hours from the current date as thats all the api 
+     * can currently handle
+     * @return [type] [description]
+     */
+    public function testGetDeviceReadsForDateOutsideOfApiHistoryLimit()
     {
-     
+    
       $cube_device = new CubeSensorsDevice('tester1', 'tester2', 'token_tester', 'secret_tester');
 
-      $mock_response =  new Response(200, [], Stream::factory(fopen(__DIR__ . '/files/single_device_returned.json', 'r+')));
+      $mock_response = $mock_response_second = $mock_response_third =  new Response(200);
 
-      $mock_response_second =  new Response(200, [],  Stream::factory(fopen(__DIR__ . '/files/single_device_multi_reads.json', 'r+')));
-    
+      $mockResponseBody = Stream::factory(fopen(__DIR__ . '/files/single_device_read.json', 'r+'));
+
+      $mock_response->setBody($mockResponseBody);
+
+      $mock_response_second->setBody($mockResponseBody);
+
+      $mock_response_third->setBody($mockResponseBody);
+ 
       $mock = new Mock([
         $mock_response,
-        $mock_response_second
+        $mock_response_second,
+        $mock_response_third
       ]);
 
       $cube_device->setupMockDataForRequest($mock);
 
-      $start_date = Carbon::now()->subDay(1);
+      $tomorrow = Carbon::now()->subDays(3);
 
-      $reads = $cube_device->getDeviceReads('000D6F0004491253', $start_date->format('Y-m-d'), NULL);
-      
-      $this->assertInternalType('array', $reads);
+      $device = $cube_device->getDeviceReadsForDate('000D6F0004491253', $tomorrow->format('Y-m-d'));
 
-      $this->assertNotCount(0, $reads);
-  
+      $this->assertNull($device);
+
+      $this->assertSame('The date you are trying to use is past the 48 hour API History limit', $cube_device->getErrorMessage());
+    
     }
 
+    /**
+     * tests getDeviceRead method with a valid device and a valid read
+     * @return [type] [description]
+     */
+    public function testGetDeviceReadsForValidDate()
+    {
+
+      $cube_device = new CubeSensorsDevice('tester1', 'tester2', 'token_tester', 'secret_tester');
+
+      $mock_response =   new Response(200);
+
+      $mock_response_second = new Response(200);
+
+      $body = Stream::factory(fopen(__DIR__ . '/files/single_device_returned.json', 'r+'));
+
+      $mockResponseBodyTwo = Stream::factory(fopen(__DIR__ . '/files/single_device_read.json', 'r+'));
+
+      $mock_response->setBody($body);
+
+      $mock_response_second->setBody($mockResponseBodyTwo);
+ 
+      $mock = new Mock([
+        $mock_response,
+        $mock_response_second
+        
+      ]);
+
+      $cube_device->setupMockDataForRequest($mock);
+
+      $yesterday = Carbon::now()->subDays(1);
+
+      $reads = $cube_device->getDeviceReadsForDate('000D6F0004491253', $yesterday->format('Y-m-d'));
+
+      $this->assertArrayHasKey('reads', $reads);
 
 
+    }
 
-    
+ 
  
 }
