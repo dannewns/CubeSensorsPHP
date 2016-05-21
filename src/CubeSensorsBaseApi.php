@@ -4,295 +4,302 @@ namespace Jump24\CubeSensors;
 
 use Carbon\Carbon;
 use GuzzleHttp\Client;
+use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Subscriber\Oauth\Oauth1;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\ServerException;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\TransferStats;
 
-class CubeSensorsBaseApi  {
+class CubeSensorsBaseApi
+{
+    protected $auth;
 
-  	protected $auth;
+    protected $route = 'http://api.cubesensors.com/';
 
-  	protected $route = 'http://api.cubesensors.com/';
+    protected $version = 'v1/';
 
-  	protected $version = 'v1/';
+    protected $device_room_types = array('work', 'sleep', 'living');
 
-  	protected $device_room_types = array('work', 'sleep', 'living');
+    protected $client;
 
-  	protected $client;
+    protected $start_date;
 
-  	protected $start_date;
+    protected $end_date;
 
-  	protected $end_date;
+    private $mock = null;
 
-  	private $mock = NULL;
+    private $error = null;
 
-  	private $error = NULL;
+    private $status_code = null;
 
-  	private $status_code = NULL;
+    protected $called_url = null;
 
-  	private $called_url = NULL;
+    private $reason = null;
 
-  	private $reason = NULL;
+    /**
+     * @var stack handler required for guzzle
+     */
+    protected $stack_handler;
 
-  	const API_DAY_DIFFERENCE_LIMIT = 2;
+    const API_DAY_DIFFERENCE_LIMIT = 2;
 
-  	const START_DATE_IN_FUTURE_ERROR = 'The start date you provided is in the future';
+    const START_DATE_IN_FUTURE_ERROR = 'The start date you provided is in the future';
 
-  	const END_DATE_BEFORE_START_DATE_ERROR = 'The end date you supplied is before the start date you supplied';
+    const END_DATE_BEFORE_START_DATE_ERROR = 'The end date you supplied is before the start date you supplied';
 
-  	private $api_range_limit_error = 'There was more than 2 days between the start and end date The API currently only supports a 2 day limit';
+    private $api_range_limit_error = 'There was more than 2 days between the start and end date The API currently only supports a 2 day limit';
 
- 	public function __construct($consumer_key, $consumer_secret, $access_token, $access_token_secrect)
- 	{
+    public function __construct($consumer_key, $consumer_secret, $access_token, $access_token_secrect)
+    {
+        $this->consumer_key = $consumer_key;
 
- 		$this->consumer_key = $consumer_key;
+        $this->consumer_secret = $consumer_secret;
 
- 		$this->consumer_secret = $consumer_secret;
+        $this->access_token = $access_token;
 
- 		$this->access_token = $access_token;
+        $this->access_token_secrect = $access_token_secrect;
 
- 		$this->access_token_secrect = $access_token_secrect;
- 
- 	}
+    }
 
- 	/**
- 	 * sets up the mock data for the get requests to allow for testing
- 	 * @param  GuzzleHttp\Subscriber\Mock $mock_data the Mock object to pass into the system for testing
- 	 * @return [type]            [description]
- 	 */
- 	public function setupMockDataForRequest(\GuzzleHttp\Subscriber\Mock $mock_data)
- 	{
- 		$this->mock = $mock_data;
- 	}
+    /**
+     * sets up the mock data for the get requests to allow for testing
+     * @param  GuzzleHttp\Subscriber\Mock $mock_data the Mock object to pass into the system for testing
+     * @return [type]            [description]
+     */
+    public function setupMockDataForRequest(MockHandler $mock_data)
+    {
+        $this->mock = $mock_data;
+    }
 
 
- 	/**
- 	 * returns the error message on the system
- 	 * @return [type] [description]
- 	 */
- 	public function getErrorMessage()
- 	{
- 		return $this->error;
- 	}
+    /**
+     * returns the error message on the system
+     * @return [type] [description]
+     */
+    public function getErrorMessage()
+    {
+        return $this->error;
+    }
 
- 	/**
- 	 * sets up the start and end date variables for the class to use and converts them to carbon format
- 	 */
- 	protected function convertToCarbon($date)
- 	{
+    /**
+     * sets up the start and end date variables for the class to use and converts them to carbon format
+     */
+    protected function convertToCarbon($date)
+    {
+        if (is_null($date)) {
+            return Carbon::now()->setTimezone('UTC');
 
- 		if (is_null($date)) {
+        } else {
+            return Carbon::createFromFormat('Y-m-d H:i:s', $date . ' 00:00:00')->addHour()->setTimezone('UTC');
+        }
 
- 			return Carbon::now()->setTimezone('UTC');
+    }
 
- 		} else 
+    /**
+     * formats the returned list of devices from the device call api into a more friendly result set
+     * @param  array $devices the array returned from the original api/devices call
+     * @return array          the formatted list of devices returned
+     */
+    protected function formatDevice($device)
+    {
 
- 			return Carbon::createFromFormat('Y-m-d H:i:s', $date . ' 00:00:00')->addHour()->setTimezone('UTC');
+        $cude = array();
 
- 	}
+        $cube['uid'] = $device['uid'];
 
- 	/**
- 	 * formats the returned list of devices from the device call api into a more friendly result set
- 	 * @param  array $devices the array returned from the original api/devices call
- 	 * @return array          the formatted list of devices returned
- 	 */
- 	protected function formatDevice($device)
- 	{
+        $cube['name'] = $device['extra']['name'];
 
- 		$cude = array();
+        $cube['roomtype'] = $device['extra']['roomtype'];
 
- 		$cube['uid'] = $device['uid'];
+        return $cube;
 
- 		$cube['name'] = $device['extra']['name'];
+    }
 
- 		$cube['roomtype'] = $device['extra']['roomtype'];
+    /**
+     * formats the devices results
+     * @param  array $results the results from the devices read
+     * @return array          The formatted results for the device
+     */
+    protected function formatReadResults($results)
+    {
 
- 		return $cube;
+        $field_list = $results['field_list'];
 
- 	}
+        $formatted_devices = array();
 
- 	/**
- 	 * formats the devices results
- 	 * @param  array $results the results from the devices read
- 	 * @return array          The formatted results for the device
- 	 */
- 	protected function formatReadResults($results)
- 	{
+        if (is_array($results['results'])) {
+            foreach ($results['results'] as $result) {
+                $device_reads = array();
 
- 		$field_list = $results['field_list'];
+                foreach ($result as $id => $value) {
+                    if (isset($field_list[$id]) && $field_list[$id] == 'time') {
+                        $time = Carbon::parse($value);
 
- 		$formatted_devices = array();
+                        $date_in_loop = $time->format('Y-m-d');
 
- 		if(is_array($results['results'])) {
+                        $device_reads[$field_list[$id]] = $time;
 
- 			foreach ($results['results'] as $result) {
+                    } else {
+                        $device_reads[$field_list[$id]] = $value;
+                    }
+                }
 
- 				$device_reads = array();
+                $formatted_devices['reads'][] = $device_reads;
 
- 				foreach ($result as $id => $value){
+            }
 
- 					if (isset($field_list[$id]) && $field_list[$id] == 'time') {
+        }
 
- 						$time = Carbon::parse($value);
+        return $formatted_devices;
 
- 						$date_in_loop = $time->format('Y-m-d');
+    }
 
- 						$device_reads[$field_list[$id]] = $time;
+    /**
+     * checks the returned value for the ok field to see if response was returned correctly
+     * @param  array  $return the returned response from a API call
+     * @return boolean         [description]
+     */
+    protected function isReturnValid($return)
+    {
+        if (is_null($return)) return FALSE;
 
- 					} else 
+        if ($return['ok']) return TRUE;
 
- 						$device_reads[$field_list[$id]] = $value;
- 				
- 				}
+        else return FALSE;
+    }
 
- 				$formatted_devices['reads'][] = $device_reads;
+    /**
+     * wrapper method to call the api by just suppling a api endpoint url
+     * @param  string 	$url the API endpoint to be called
+     * @param  array 	$query_parameters the query string parameters to pass into the call
+     * @return 			the result from the call be it the details for a cube or NULL when nothing found
+     */
+    public function get($url, $query_parameters = array(), $dump_data = false)
+    {
+        try {
+            $this->setupClient();
 
- 			}
+            $request = $this->client->request(
+                'GET',
+                $url,
+                [
+                    'on_stats' => function (TransferStats $stats) use (&$url) {
+                        $this->called_url = $stats->getEffectiveUri();
+                    }
+                ]
+            );
 
- 		}
+            if (!empty($query_parameters)) {
+                $query = $request->getQuery();
 
- 		return $formatted_devices;
+                foreach ($query_parameters as $field => $value) {
+                    $query->set($field, $value);
 
- 	}
+                }
 
- 	/**
- 	 * checks the returned value for the ok field to see if response was returned correctly
- 	 * @param  array  $return the returned response from a API call
- 	 * @return boolean         [description]
- 	 */
- 	protected function isReturnValid($return)
- 	{
- 		if (is_null($return)) return FALSE;
+            }
 
- 		if ($return['ok']) return TRUE;
+            $response = $this->client->send($request);
 
- 		else return FALSE;
- 	}
+            if ($response->getStatusCode() != 200) {
+                return null;
 
- 	/**
- 	 * wrapper method to call the api by just suppling a api endpoint url 
- 	 * @param  string 	$url the API endpoint to be called
- 	 * @param  array 	$query_parameters the query string parameters to pass into the call
- 	 * @return 			the result from the call be it the details for a cube or NULL when nothing found
- 	 */
- 	public function get($url, $query_parameters = array(), $dump_data = false)
- 	{
+            }
 
- 		try {	
+            if ($dump_data) {
+                $body = $response->getBody();
 
- 			$this->setupClient();
+                echo $body;
 
-		    $request = $this->client->createRequest('GET', $url);
+                die();
 
-		    if (!empty($query_parameters)) {
+            }
 
-		    	$query = $request->getQuery();
+            $body = $response->json();
 
-		    	foreach ($query_parameters as $field => $value) {
+            if ($this->isReturnValid($body)) {
+                return $body;
 
-		    		$query->set($field, $value);
+            } else {
+                return null;
+            }
 
-		    	}
+        } catch (ServerException $e) {
+            $this->setResponseValues($e->getResponse());
 
-		    }
+            $this->error = $e->getMessage();
 
-		    $response = $this->client->send($request);
+            return null;
 
-		    if ($response->getStatusCode() != 200)  {
+        } catch (ClientException $e) {
+            $this->error = $e->getMessage();
 
-		    	return NULL;
-		    
-		    }
+            $this->setResponseValues($e->getResponse());
 
-		    if ($dump_data) {
+            return null;
 
-		    	$body = $response->getBody();
+        } catch (RequestException $e) {
+            $this->error = $e->getMessage();
 
-		    	echo $body;
+            $this->setResponseValues($e->getResponse());
 
-		    	die();
-		    
-		    }
+            return null;
+        }
 
-		   	$body = $response->json();
+    }
 
-		   	if ($this->isReturnValid($body)) {
+    public function getCalledUrl()
+    {
+        return $this->called_url;
+    }
 
-		   		return $body;
-		   	
-		   	} else
+    /**
+     * sets up the error responses for the exceptions handled
+     * @param GuzzleHttp\Psr7\Response $response the response from the API Call
+     */
+    private function setResponseValues(Response $response)
+    {
+        $this->status_code = $response->getStatusCode();
 
-		   		return NULL;
-		
-		} catch(ServerException $e) {
+        $this->reason = $response->getReasonPhrase();
+    }
 
-			$this->setResponseValues($e->getResponse());
+    /**
+     * sets up the guzzle client ready to use the api
+     * @return [type] [description]
+     */
+    private function setupClient()
+    {
+        $this->createStackHandler();
 
-			$this->error = $e->getMessage();
+        $this->addOauthToStack();
 
-			return NULL;
+        $this->client = new Client(
+            array(
+                'base_url' => $this->route . $this->version,
+                'handler'   => $this->stack_handler,
+                'defaults' => array('auth' => 'oauth')
+            )
+        );
+    }
 
-		} catch(ClientException $e) {
+    protected function createStackHandler()
+    {
+        $this->stack_handler = HandlerStack::create($this->mock);
+    }
 
-			$this->error = $e->getMessage();
+    protected function addOauthToStack()
+    {
+        $middleware = new Oauth1([
+            'consumer_key'    => $this->consumer_key,
+            'consumer_secret' => $this->consumer_secret,
+            'token'           => $this->access_token,
+            'token_secret'    => $this->access_token_secrect
+        ]);
 
-			$this->setResponseValues($e->getResponse());
-
-			return NULL;
-
-		} catch (RequestException $e) {
-
-			$this->error = $e->getMessage();
-
-			$this->setResponseValues($e->getResponse());
-			
-			return NULL;
-		
-		}
-
- 	}
-
- 	/**
- 	 * sets up the error responses for the exceptions handled
- 	 * @param GuzzleHttp\Message\Response $response [description]
- 	 */
- 	private function setResponseValues(\GuzzleHttp\Message\Response $response)
- 	{
-
-		$this->status_code = $response->getStatusCode();
-
-		$this->reason = $response->getReasonPhrase();
-
-		$this->called_url = $response->getEffectiveUrl();
- 	
- 	}
-
- 	/**
- 	 * sets up the guzzle client ready to use the api
- 	 * @return [type] [description]
- 	 */
- 	private function setupClient()
- 	{
- 		
- 		$oauth = new Oauth1([
-			    'consumer_key'    => $this->consumer_key,
-			    'consumer_secret' => $this->consumer_secret,
-			    'token'           => $this->access_token,
-			    'token_secret'    => $this->access_token_secrect
-			]);
-
- 		$this->client = new Client( array(	'base_url' => $this->route . $this->version, 
- 											'defaults' => array('auth' => 'oauth') ) );
-
-
- 		if (!is_null($this->mock)) {
-
- 			$this->client->getEmitter()->attach($this->mock);
- 			
- 		} 
-
-		$this->client->getEmitter()->attach($oauth);
- 	}
-
+        $this->stack_handler->push($middleware);
+    }
 }

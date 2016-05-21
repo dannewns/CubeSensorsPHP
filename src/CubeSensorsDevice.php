@@ -4,170 +4,166 @@ namespace Jump24\CubeSensors;
 
 use Jump24\CubeSensors\Traits\ValidationTrait;
 
-class CubeSensorsDevice extends CubeSensorsBaseApi  {
+class CubeSensorsDevice extends CubeSensorsBaseApi
+{
+    use ValidationTrait;
 
-	use ValidationTrait;
+    public function __construct($consumer_key, $consumer_secret, $access_token, $access_token_secrect)
+    {
+        parent::__construct($consumer_key, $consumer_secret, $access_token, $access_token_secrect);
+    }
 
- 	public function __construct($consumer_key, $consumer_secret, $access_token, $access_token_secrect)
- 	{
- 		parent::__construct($consumer_key, $consumer_secret, $access_token, $access_token_secrect);
+    /**
+     * returns a list of devices that the user has allowed access to
+     * @return array an array of Cube objects
+     */
+    public function getDevices()
+    {
 
- 	}
+        $devices =  $this->get('devices');
 
- 	/**
- 	 * returns a list of devices that the user has allowed access to
- 	 * @return array an array of Cube objects
- 	 */
- 	public function getDevices()
- 	{
+        if (!is_null($devices)) {
+            $formatted_devices = array();
 
- 		$devices =  $this->get('devices');
+            foreach ($devices['devices'] as $device) {
+                $formatted_devices[] = $this->formatDevice($device);
+            }
 
- 		if (!is_null($devices)) {
+            return $formatted_devices;
 
- 			$formatted_devices = array();
+        } else {
+            return null;
+        }
+    }
 
- 			foreach ($devices['devices'] as $device) {
+    /**
+     * return a individual device by device UID from the API
+     * @param  string $device_id the device UID belonging to the device to look up
+     * @return array            the device found
+     */
+    public function getDevice($device_id = null)
+    {
+        if (is_null($device_id)) {
+            return null;
+        }
 
- 				$formatted_devices[] = $this->formatDevice($device);
- 			}
- 	
- 			return $formatted_devices;
+        $device = $this->get('devices/' . $device_id);
 
- 		} else
+        if (!is_null($device)) {
+            unset($device['ok']);
 
- 			return NULL;
+            return $this->formatDevice($device['device']);
 
- 	}
+        } else {
+            return null;
+        }
 
- 	/**
- 	 * return a individual device by device UID from the API
- 	 * @param  string $device_id the device UID belonging to the device to look up
- 	 * @return array            the device found
- 	 */
- 	public function getDevice($device_id = NULL)
- 	{
- 		if (is_null($device_id)) return NULL;
+    }
 
- 		$device = $this->get('devices/' . $device_id);
+    /**
+     * returns the current reads for the device
+     * @param  string $device the device id to use
+     * @return [type]            [description]
+     */
+    public function getDeviceCurrentReads($device_id)
+    {
+        if ($reads = $this->get('devices/' . $device_id . '/current', array())) {
+            if ($this->isReturnValid($reads)) {
+                return $this->formatReadResults($reads);
+            }
+        }
 
- 		if (!is_null($device)) {
+        return false;
 
- 			unset($device['ok']);
+    }
 
- 			return $this->formatDevice($device['device']);
+    /**
+     * returns a list of device reads from the API
+     * @param  string $device_id  the device id to query against
+     * @param  string $date the start date to pull data from
+     * @return array             returns a array of objects the keys being the date of the read
+     */
+    public function getDeviceReadsForDate($device_id = null, $date, $resolution = 60)
+    {
+        if (is_null($device_id)) {
+            return null;
+        }
 
- 		} else
+        if ($this->isDateInThePast($date) && $this->isDatePastApiHistoryLimit($date)) {
+            if ($device = $this->getDevice($device_id)) {
+                $date = $this->convertToCarbon($date);
 
- 			return NULL;
+                $date = $date->toISO8601String();
 
- 	}
+                $date = str_replace('+0000', 'Z', $date);
 
- 	/**
- 	 * returns the current reads for the device
- 	 * @param  string $device the device id to use
- 	 * @return [type]            [description]
- 	 */
- 	public function getDeviceCurrentReads($device_id)
- 	{
- 		if ($reads = $this->get('devices/' . $device_id . '/current', array())) {
+                if ($reads = $this->get(
+                    'devices/' . $device_id . '/span',
+                    [
+                        'start' => $date,
+                        'end' => $date,
+                        'resolution' => $resolution
+                    ]
+                )
+                ) {
+                    if ($this->isReturnValid($reads)) {
+                        return $this->formatReadResults($reads);
+                    }
 
- 			if ($this->isReturnValid($reads)) {
+                }
 
- 				return $this->formatReadResults($reads);
+                return null;
 
- 			}
+            }
 
- 		}
+        }
 
- 		return false;
+    }
 
- 	}
+    /**
+     * returns reads for a device by a start and end date supplied by the user
+     * @param  string $device_id  the device id to get data for
+     * @param  [type] $start_date [description]
+     * @param  [type] $end_date   [description]
+     * @param  [type] $resolution [description]
+     * @return [type]             [description]
+     */
+    public function getDeviceReadsBetweenDates($device_id = NULL, $start_date = NULL, $end_date = NULL, $resolution = 60)
+    {
 
- 	/**
- 	 * returns a list of device reads from the API
- 	 * @param  string $device_id  the device id to query against
- 	 * @param  string $date the start date to pull data from
- 	 * @return array             returns a array of objects the keys being the date of the read
- 	 */
- 	public function getDeviceReadsForDate($device_id = NULL, $date, $resolution = 60)
- 	{
- 		if (is_null($device_id)) return NULL;
+        if (is_null($start_date) || is_null($end_date)) return NULL;
 
- 		if ($this->isDateInThePast($date) && $this->isDatePastApiHistoryLimit($date)) {
+        if ($this->isDateInThePast($start_date) && $this->isDateInThePast($end_date)) {
 
-	 		if ($device = $this->getDevice($device_id)) {
+            if ( $this->isEndDateAfterStartDate($start_date, $end_date)) {
 
-		 		$date = $this->convertToCarbon($date);
+                if ($this->validateDateDifferenceIsInBetweenApiLimit($start_date, $end_date) ){
 
-		 		$date = $date->toISO8601String();
+                    $start_date = $this->convertToCarbon($start_date);
 
-				$date = str_replace('+0000', 'Z', $date);
+                    $end_date = $this->convertToCarbon($end_date);
 
-		 		if ($reads =   $this->get('devices/' . $device_id . '/span', ['start' => $date, 'end' => $date, 'resolution' => $resolution  ] )){
+                    $start_date_internal = $start_date->addHour()->toISO8601String();
 
-		 			if ($this->isReturnValid($reads)) 
+                    $end_date_internal = $end_date->toISO8601String();
 
-		 				return $this->formatReadResults($reads);
-		 		
-		 		}
+                    $end_date_internal = str_replace('+0000', 'Z', $end_date_internal);
 
-		 		return NULL;
+                    $start_date_internal = str_replace('+0000', 'Z', $start_date_internal);
 
-		 	}
+                    if ($reads =  $this->get('devices/' . $device_id . '/span', ['start' => $start_date_internal, 'end' => $end_date_internal, 'resolution' => $resolution ] )) {
 
-		}
+                        if ($this->isReturnValid($reads))
 
- 	} 	
+                            return $this->formatReadResults($reads);
 
- 	/**
- 	 * returns reads for a device by a start and end date supplied by the user
- 	 * @param  string $device_id  the device id to get data for
- 	 * @param  [type] $start_date [description]
- 	 * @param  [type] $end_date   [description]
- 	 * @param  [type] $resolution [description]
- 	 * @return [type]             [description]
- 	 */
- 	public function getDeviceReadsBetweenDates($device_id = NULL, $start_date = NULL, $end_date = NULL, $resolution = 60)
- 	{	
+                    }
 
- 		if (is_null($start_date) || is_null($end_date)) return NULL;
+                }
 
- 		if ($this->isDateInThePast($start_date) && $this->isDateInThePast($end_date)) {
+            }
 
- 			if ( $this->isEndDateAfterStartDate($start_date, $end_date)) {
+        }
 
- 				if ($this->validateDateDifferenceIsInBetweenApiLimit($start_date, $end_date) ){
-
- 					$start_date = $this->convertToCarbon($start_date);
-
- 					$end_date = $this->convertToCarbon($end_date);
-
-					$start_date_internal = $start_date->addHour()->toISO8601String();
-
-					$end_date_internal = $end_date->toISO8601String();
-
-					$end_date_internal = str_replace('+0000', 'Z', $end_date_internal);
-
-					$start_date_internal = str_replace('+0000', 'Z', $start_date_internal); 
-			 	
-			 		if ($reads =  $this->get('devices/' . $device_id . '/span', ['start' => $start_date_internal, 'end' => $end_date_internal, 'resolution' => $resolution ] )) {
-
-			 			if ($this->isReturnValid($reads)) 
-
-		 					return $this->formatReadResults($reads);
-			 		
-			 		}
-
-		 		}
-
- 			}
-
- 		}
-
- 	}
-
-
-
-
+    }
 }

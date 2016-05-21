@@ -3,7 +3,7 @@
     "description": "CubeSensors API wrapper to help users retrieve data easier.",
     "keywords" : ["cubesensors", "API"],
     "license": "MIT",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "authors": [
         {
             "name": "Daniel Newns",
@@ -15,14 +15,15 @@
     ],
     "minimum-stability": "dev",
     "require": {
-        "php": ">=5.4.0",
-    	"guzzlehttp/guzzle": "5.1.0",
-    	"guzzlehttp/oauth-subscriber": "0.2.0",
+        "php": ">=5.5.0",
+    	"guzzlehttp/guzzle": "6.2.0",
+    	"guzzlehttp/oauth-subscriber": "0.3.0",
     	"ohmy/auth": "0.0.6",
     	"nesbot/carbon": "1.13.0"
     },
     "require-dev": {
-       "phpunit/phpunit": "4.4.5"
+       "phpunit/phpunit": "4.4.5",
+        "mockery/mockery": "0.9.4"
     },
     "autoload": {
     	"psr-4" : {
