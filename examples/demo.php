@@ -13,4 +13,3 @@ $devices = $cube_device->getDevices();
 $device = $cube_device->getDevice($example_device_id);
 
 $reads = $cube_device->getDeviceReads($example_device_id);
-
