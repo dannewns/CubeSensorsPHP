@@ -90,33 +90,30 @@ class CubeSensorsDevice extends CubeSensorsBaseApi
         }
 
         if ($this->isDateInThePast($date) && $this->isDatePastApiHistoryLimit($date)) {
-            if ($device = $this->getDevice($device_id)) {
-                $date = $this->convertToCarbon($date);
+            $date = $this->convertToCarbon($date);
 
-                $date = $date->toISO8601String();
+            $date = $date->toISO8601String();
 
-                $date = str_replace('+0000', 'Z', $date);
+            $date = str_replace('+0000', 'Z', $date);
 
-                if ($reads = $this->get(
-                    'devices/' . $device_id . '/span',
-                    [
-                        'start' => $date,
-                        'end' => $date,
-                        'resolution' => $resolution
-                    ]
-                )
-                ) {
-                    if ($this->isReturnValid($reads)) {
-                        return $this->formatReadResults($reads);
-                    }
-
+            if ($reads = $this->get(
+                'devices/' . $device_id . '/span',
+                [
+                    'start' => $date,
+                    'end' => $date,
+                    'resolution' => $resolution
+                ]
+            )
+            ) {
+                if ($this->isReturnValid($reads)) {
+                    return $this->formatReadResults($reads);
                 }
-
-                return null;
 
             }
 
+            return null;
         }
+        return null;
 
     }
 

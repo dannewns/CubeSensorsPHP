@@ -4,6 +4,7 @@ namespace Jump24\CubeSensors;
 
 use Carbon\Carbon;
 use GuzzleHttp\Client;
+use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Subscriber\Oauth\Oauth1;
 use GuzzleHttp\Exception\RequestException;
@@ -67,7 +68,6 @@ class CubeSensorsBaseApi
     /**
      * sets up the mock data for the get requests to allow for testing
      * @param  GuzzleHttp\Subscriber\Mock $mock_data the Mock object to pass into the system for testing
-     * @return [type]            [description]
      */
     public function setupMockDataForRequest(MockHandler $mock_data)
     {
@@ -181,32 +181,16 @@ class CubeSensorsBaseApi
     {
         try {
             $this->setupClient();
-
-            $request = $this->client->request(
-                'GET',
-                $url,
-                [
-                    'on_stats' => function (TransferStats $stats) use (&$url) {
-                        $this->called_url = $stats->getEffectiveUri();
-                    }
-                ]
-            );
-
+            
             if (!empty($query_parameters)) {
-                $query = $request->getQuery();
-
-                foreach ($query_parameters as $field => $value) {
-                    $query->set($field, $value);
-
-                }
-
+                $url = $url . '?' . http_build_query($query_parameters);
             }
+            $request = new Request('GET', $url);
 
             $response = $this->client->send($request);
 
             if ($response->getStatusCode() != 200) {
                 return null;
-
             }
 
             if ($dump_data) {
@@ -218,7 +202,7 @@ class CubeSensorsBaseApi
 
             }
 
-            $body = $response->json();
+            $body = json_decode($response->getBody(), true);
 
             if ($this->isReturnValid($body)) {
                 return $body;
@@ -244,7 +228,9 @@ class CubeSensorsBaseApi
         } catch (RequestException $e) {
             $this->error = $e->getMessage();
 
-            $this->setResponseValues($e->getResponse());
+            if (!is_null($e->getResponse())) {
+                $this->setResponseValues($e->getResponse());
+            }
 
             return null;
         }
@@ -279,9 +265,12 @@ class CubeSensorsBaseApi
 
         $this->client = new Client(
             array(
-                'base_url' => $this->route . $this->version,
+                'base_uri' => $this->route . $this->version,
                 'handler'   => $this->stack_handler,
-                'defaults' => array('auth' => 'oauth')
+                'defaults' => array('auth' => 'oauth'),
+                'on_stats' => function (TransferStats $stats) use (&$url) {
+                    $this->called_url = $stats->getEffectiveUri();
+                }
             )
         );
     }

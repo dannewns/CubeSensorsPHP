@@ -23,7 +23,6 @@ class ValidationTraitTest extends PHPUnit_Framework_TestCase {
      */
     public function testDateValidWithInvalidStringData()
     {
-
         $result = $this->isDateValid('asdsad');
 
         $this->assertFalse($result);

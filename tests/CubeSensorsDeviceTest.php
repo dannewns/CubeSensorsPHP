@@ -4,6 +4,7 @@ use Jump24\CubeSensors\CubeSensorsDevice;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\Psr7;
 use GuzzleHttp\Psr7\Response;
+use GuzzleHttp\Psr7\Request;
 use Carbon\Carbon;
 
 /**
@@ -36,9 +37,9 @@ class CubeSensorsDeviceTest extends PHPUnit_Framework_TestCase
 
         $mock_response = new Response(404);
 
-        $mockResponseBody = Psr7\stream_for('{"device": {"type": "cube", "uid": "000D6F0004491253", "extra": {"roomtype": "work", "name": "Front Room"}}, "ok": true}');
+        $mockResponseBody = Psr7\stream_for('{"device": {"type": "cube", "uid": "000D6F0004491253", "extra": {"roomtype": "work", "name": "Front Room"}}, "ok": false}');
 
-        $mock_response->withBody($mockResponseBody);
+        $mock_response = $mock_response->withBody($mockResponseBody);
 
         $mock = new MockHandler([ $mock_response ]);
 
@@ -64,9 +65,11 @@ class CubeSensorsDeviceTest extends PHPUnit_Framework_TestCase
 
         $mockResponseBody = Psr7\stream_for('{"device": {"type": "cube", "uid": "000D6F0004491253", "extra": {"roomtype": "work", "name": "Front Room"}}, "ok": true}');
 
-        $mock_response->withBody($mockResponseBody);
+        $mock_response = $mock_response->withBody($mockResponseBody);
 
-        $mock = new MockHandler([ $mock_response ]);
+        $mock = new MockHandler([
+            $mock_response
+        ]);
 
         $cube_device->setupMockDataForRequest($mock);
 
@@ -87,6 +90,7 @@ class CubeSensorsDeviceTest extends PHPUnit_Framework_TestCase
      * @test
      * @covers ::getDeviceReadsForDate
      * @group getDeviceReadsForDate
+     *
      *
      */
     public function testGetDeviceReadsForDateUsingDateInTheFuture()
@@ -137,11 +141,11 @@ class CubeSensorsDeviceTest extends PHPUnit_Framework_TestCase
 
         $mockResponseBody = Psr7\stream_for(fopen(__DIR__ . '/files/single_device_read.json', 'r+'));
 
-        $mock_response->withBody($mockResponseBody);
+        $mock_response = $mock_response->withBody($mockResponseBody);
 
-        $mock_response_second->withBody($mockResponseBody);
+        $mock_response_second = $mock_response_second->withBody($mockResponseBody);
 
-        $mock_response_third->withBody($mockResponseBody);
+        $mock_response_third = $mock_response_third->withBody($mockResponseBody);
 
         $mock = new MockHandler([
             $mock_response,
@@ -166,24 +170,20 @@ class CubeSensorsDeviceTest extends PHPUnit_Framework_TestCase
      * @test
      * @covers ::getDeviceReadsForDate
      * @group getDeviceReadsForDate
+     * @group testTest
      */
     public function testGetDeviceReadsForValidDate()
     {
         $cube_device = new CubeSensorsDevice('tester1', 'tester2', 'token_tester', 'secret_tester');
 
-        $mock_response = $mock_response_second = new Response(200);
+        $mock_response_second = new Response(200);
 
-        $body = Psr7\stream_for(fopen(__DIR__ . '/files/single_device_returned.json', 'r+'));
+        $mockResponseBodyTwo = Psr7\stream_for(file_get_contents(__DIR__ . '/files/single_device_read.json'));
 
-        $mockResponseBodyTwo = Psr7\stream_for(fopen(__DIR__ . '/files/single_device_read.json', 'r+'));
-
-        $mock_response->withBody($body);
-
-        $mock_response_second->withBody($mockResponseBodyTwo);
+        $mock_response = $mock_response_second->withBody($mockResponseBodyTwo);
 
         $mock = new MockHandler([
-            $mock_response,
-            $mock_response_second
+            $mock_response
         ]);
 
         $cube_device->setupMockDataForRequest($mock);
