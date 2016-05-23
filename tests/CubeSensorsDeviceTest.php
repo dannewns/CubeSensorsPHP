@@ -25,6 +25,17 @@ class CubeSensorsDeviceTest extends PHPUnit_Framework_TestCase
     }
 
     /**
+     * tests the get devices method with some valid device returned
+     * @test
+     * @covers ::getDevices
+     * @group getDevices
+     */
+    public function testGetDevicesWithValidDevices()
+    {
+
+    }
+
+    /**
      * tests the getDevice method with a invalid device id to make sure the result returned is correct.
      *
      * @test

@@ -8,9 +8,13 @@ class CubeSensorsDevice extends CubeSensorsBaseApi
 {
     use ValidationTrait;
 
-    public function __construct($consumer_key, $consumer_secret, $access_token, $access_token_secrect)
-    {
-        parent::__construct($consumer_key, $consumer_secret, $access_token, $access_token_secrect);
+    public function __construct(
+        $consumer_key,
+        $consumer_secret,
+        $access_token,
+        $access_token_secret
+    ) {
+        parent::__construct($consumer_key, $consumer_secret, $access_token, $access_token_secret);
     }
 
     /**
@@ -23,13 +27,13 @@ class CubeSensorsDevice extends CubeSensorsBaseApi
         $devices = $this->get('devices');
 
         if (!is_null($devices)) {
-            $formatted_devices = [];
+            $devices = collect($devices['devices']);
 
-            foreach ($devices['devices'] as $device) {
-                $formatted_devices[] = $this->formatDevice($device);
-            }
+            $devices = $devices->map(function ($item) {
+                return $this->formatDevice($item);
+            });
 
-            return $formatted_devices;
+            return $devices;
         } else {
             return;
         }

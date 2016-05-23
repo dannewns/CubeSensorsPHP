@@ -212,18 +212,22 @@ class CubeSensorsBaseApi
                 return;
             }
         } catch (ServerException $e) {
+            var_dump($e);
             $this->setResponseValues($e->getResponse());
 
             $this->error = $e->getMessage();
 
             return;
         } catch (ClientException $e) {
+            var_dump($e);
             $this->error = $e->getMessage();
 
             $this->setResponseValues($e->getResponse());
 
             return;
         } catch (RequestException $e) {
+
+            var_dump($e);
             $this->error = $e->getMessage();
 
             if (!is_null($e->getResponse())) {
@@ -266,7 +270,7 @@ class CubeSensorsBaseApi
             [
                 'base_uri'  => $this->route.$this->version,
                 'handler'   => $this->stack_handler,
-                'defaults'  => ['auth' => 'oauth'],
+                'auth' => 'oauth',
                 'on_stats'  => function (TransferStats $stats) use (&$url) {
                     $this->called_url = $stats->getEffectiveUri();
                 },
