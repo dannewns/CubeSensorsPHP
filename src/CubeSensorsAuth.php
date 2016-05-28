@@ -25,7 +25,7 @@ class CubeSensorsAuth
     public function getAccessToken()
     {
         return $this->auth->request($this->request_token_url)
-                   ->authorize($this->authorize_url)
-                   ->access($this->access_token_url);
+                ->authorize($this->authorize_url)
+                ->access($this->access_token_url);
     }
 }

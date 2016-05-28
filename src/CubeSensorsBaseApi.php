@@ -7,7 +7,12 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Exception\ServerException;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Subscriber\Oauth\Oauth1;
+use GuzzleHttp\TransferStats;
 
 class CubeSensorsBaseApi
 {
@@ -31,9 +36,14 @@ class CubeSensorsBaseApi
 
     private $status_code = null;
 
-    private $called_url = null;
+    protected $called_url = null;
 
     private $reason = null;
+
+    /**
+     * @var stack handler required for guzzle
+     */
+    protected $stack_handler;
 
     const API_DAY_DIFFERENCE_LIMIT = 2;
 
@@ -58,10 +68,8 @@ class CubeSensorsBaseApi
      * sets up the mock data for the get requests to allow for testing.
      *
      * @param GuzzleHttp\Subscriber\Mock $mock_data the Mock object to pass into the system for testing
-     *
-     * @return [type] [description]
      */
-    public function setupMockDataForRequest(\GuzzleHttp\Subscriber\Mock $mock_data)
+    public function setupMockDataForRequest(MockHandler $mock_data)
     {
         $this->mock = $mock_data;
     }
@@ -97,7 +105,7 @@ class CubeSensorsBaseApi
      */
     protected function formatDevice($device)
     {
-        $cude = [];
+        $cube = [];
 
         $cube['uid'] = $device['uid'];
 
@@ -128,8 +136,6 @@ class CubeSensorsBaseApi
                 foreach ($result as $id => $value) {
                     if (isset($field_list[$id]) && $field_list[$id] == 'time') {
                         $time = Carbon::parse($value);
-
-                        $date_in_loop = $time->format('Y-m-d');
 
                         $device_reads[$field_list[$id]] = $time;
                     } else {
@@ -177,15 +183,10 @@ class CubeSensorsBaseApi
         try {
             $this->setupClient();
 
-            $request = $this->client->createRequest('GET', $url);
-
             if (!empty($query_parameters)) {
-                $query = $request->getQuery();
-
-                foreach ($query_parameters as $field => $value) {
-                    $query->set($field, $value);
-                }
+                $url = $url.'?'.http_build_query($query_parameters);
             }
+            $request = new Request('GET', $url);
 
             $response = $this->client->send($request);
 
@@ -201,7 +202,7 @@ class CubeSensorsBaseApi
                 die();
             }
 
-            $body = $response->json();
+            $body = json_decode($response->getBody(), true);
 
             if ($this->isReturnValid($body)) {
                 return $body;
@@ -223,24 +224,29 @@ class CubeSensorsBaseApi
         } catch (RequestException $e) {
             $this->error = $e->getMessage();
 
-            $this->setResponseValues($e->getResponse());
+            if (!is_null($e->getResponse())) {
+                $this->setResponseValues($e->getResponse());
+            }
 
             return;
         }
     }
 
+    public function getCalledUrl()
+    {
+        return $this->called_url;
+    }
+
     /**
      * sets up the error responses for the exceptions handled.
      *
-     * @param GuzzleHttp\Message\Response $response [description]
+     * @param GuzzleHttp\Psr7\Response $response the response from the API Call
      */
-    private function setResponseValues(\GuzzleHttp\Message\Response $response)
+    private function setResponseValues(Response $response)
     {
         $this->status_code = $response->getStatusCode();
 
         $this->reason = $response->getReasonPhrase();
-
-        $this->called_url = $response->getEffectiveUrl();
     }
 
     /**
@@ -250,20 +256,47 @@ class CubeSensorsBaseApi
      */
     private function setupClient()
     {
-        $oauth = new Oauth1([
-                'consumer_key'    => $this->consumer_key,
-                'consumer_secret' => $this->consumer_secret,
-                'token'           => $this->access_token,
-                'token_secret'    => $this->access_token_secrect,
-            ]);
+        $this->createStackHandler();
 
-        $this->client = new Client(['base_url'         => $this->route.$this->version,
-                                            'defaults' => ['auth' => 'oauth'], ]);
+        $this->addOauthToStack();
 
-        if (!is_null($this->mock)) {
-            $this->client->getEmitter()->attach($this->mock);
-        }
+        $this->client = new Client(
+            [
+                'base_uri'  => $this->route.$this->version,
+                'handler'   => $this->stack_handler,
+                'auth' => 'oauth',
+                'on_stats'  => function (TransferStats $stats) use (&$url) {
+                    $this->called_url = $stats->getEffectiveUri();
+                },
+            ]
+        );
+    }
 
-        $this->client->getEmitter()->attach($oauth);
+    protected function createStackHandler()
+    {
+        $this->stack_handler = HandlerStack::create($this->mock);
+    }
+
+    protected function addOauthToStack()
+    {
+        $middleware = new Oauth1([
+            'consumer_key'    => $this->consumer_key,
+            'consumer_secret' => $this->consumer_secret,
+            'token'           => $this->access_token,
+            'token_secret'    => $this->access_token_secrect,
+        ]);
+
+        $this->stack_handler->push($middleware);
+    }
+
+    protected function convertDateToApiFormat($date)
+    {
+        $date = $this->convertToCarbon($date);
+
+        $date = $date->toISO8601String();
+
+        $date = str_replace('+0000', 'Z', $date);
+
+        return $date;
     }
 }
