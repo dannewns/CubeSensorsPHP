@@ -25,14 +25,14 @@ class CubeSensorsDeviceTest extends PHPUnit_Framework_TestCase
     }
 
     /**
-     * tests the get devices method with some valid device returned
+     * tests the get devices method with some valid device returned.
+     *
      * @test
      * @covers ::getDevices
      * @group getDevices
      */
     public function testGetDevicesWithValidDevices()
     {
-
     }
 
     /**

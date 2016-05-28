@@ -264,7 +264,7 @@ class CubeSensorsBaseApi
             [
                 'base_uri'  => $this->route.$this->version,
                 'handler'   => $this->stack_handler,
-                'auth' => 'oauth',
+                'auth'      => 'oauth',
                 'on_stats'  => function (TransferStats $stats) use (&$url) {
                     $this->called_url = $stats->getEffectiveUri();
                 },

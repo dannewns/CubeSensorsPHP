@@ -148,11 +148,11 @@ class CubeSensorsDevice extends CubeSensorsBaseApi
                     $start_date_internal = str_replace('+0000', 'Z', $start_date_internal);
 
                     if ($reads = $this->get(
-                        'devices/' . $device_id . '/span',
+                        'devices/'.$device_id.'/span',
                         [
-                            'start' => $start_date_internal,
-                            'end' => $end_date_internal,
-                            'resolution' => $resolution
+                            'start'      => $start_date_internal,
+                            'end'        => $end_date_internal,
+                            'resolution' => $resolution,
                         ]
                     )
                     ) {
