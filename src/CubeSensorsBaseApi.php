@@ -105,7 +105,7 @@ class CubeSensorsBaseApi
      */
     protected function formatDevice($device)
     {
-        $cude = [];
+        $cube = [];
 
         $cube['uid'] = $device['uid'];
 
@@ -136,8 +136,6 @@ class CubeSensorsBaseApi
                 foreach ($result as $id => $value) {
                     if (isset($field_list[$id]) && $field_list[$id] == 'time') {
                         $time = Carbon::parse($value);
-
-                        $date_in_loop = $time->format('Y-m-d');
 
                         $device_reads[$field_list[$id]] = $time;
                     } else {
@@ -212,22 +210,18 @@ class CubeSensorsBaseApi
                 return;
             }
         } catch (ServerException $e) {
-            var_dump($e);
             $this->setResponseValues($e->getResponse());
 
             $this->error = $e->getMessage();
 
             return;
         } catch (ClientException $e) {
-            var_dump($e);
             $this->error = $e->getMessage();
 
             $this->setResponseValues($e->getResponse());
 
             return;
         } catch (RequestException $e) {
-
-            var_dump($e);
             $this->error = $e->getMessage();
 
             if (!is_null($e->getResponse())) {
@@ -293,5 +287,16 @@ class CubeSensorsBaseApi
         ]);
 
         $this->stack_handler->push($middleware);
+    }
+
+    protected function convertDateToApiFormat($date)
+    {
+        $date = $this->convertToCarbon($date);
+
+        $date = $date->toISO8601String();
+
+        $date = str_replace('+0000', 'Z', $date);
+
+        return $date;
     }
 }

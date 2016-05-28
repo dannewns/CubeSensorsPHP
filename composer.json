@@ -3,7 +3,7 @@
     "description": "CubeSensors API wrapper to help users retrieve data easier.",
     "keywords" : ["cubesensors", "API"],
     "license": "MIT",
-    "version": "0.2.0",
+    "version": "1.0.0",
     "authors": [
         {
             "name": "Daniel Newns",
